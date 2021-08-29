@@ -16,7 +16,7 @@ def getCookies():
     response = requests.post(url, json=payload, headers=headers)
     return response.cookies
 
-def getToken(cookies):
+def getToken(cookies, username, password):
     url = "https://auth.riotgames.com/api/v1/authorization"
 
     payload = {
@@ -30,9 +30,12 @@ def getToken(cookies):
 
     response = requests.put(url, json=payload, headers=headers, cookies=cookies)
     data = json.loads(response.content)
-    token = data["response"]["parameters"]["uri"]
-    token = token[token.find("token=")+6:token.find("&scope")]
-    return token
+    try :
+        token = data["response"]["parameters"]["uri"]
+        token = token[token.find("token=")+6:token.find("&scope")]
+        return token
+    except :
+        return None
 
 def getEntitlement(riotToken):
     url = "https://entitlements.auth.riotgames.com/api/token/v1"
@@ -206,12 +209,24 @@ def getPlayerName(puuid,riotToken,entitlement, region="eu"):
     data = json.loads(response.content)
     return data[0]["GameName"]
 
+def getUserPuuid(riotToken):
+    url = "https://auth.riotgames.com/userinfo"
+    headers = {
+        "Authorization": "Bearer "+ riotToken,
+    }
+    response = requests.get(url, headers=headers)
+    data = json.loads(response.content)
+    return data["sub"]
 
 
-def main(name):
-    riotToken = getToken(getCookies())
+def main(username, password):
+    riotToken = getToken(getCookies(), username, password)
+
+    if riotToken == None:
+        return "Wrong Username and password combination"
+
     entitlement = getEntitlement(riotToken)
-    userPuuid = getPuuidbyName(name) #"9a4b2bdf-e43b-5893-8284-9759a4ec2fd1"
+    userPuuid = getUserPuuid(riotToken)  # getPuuidbyName(name) #"9a4b2bdf-e43b-5893-8284-9759a4ec2fd1"
     clientPlatform = "ew0KCSJwbGF0Zm9ybVR5cGUiOiAiUEMiLA0KCSJwbGF0Zm9ybU9TIjogIldpbmRvd3MiLA0KCSJwbGF0Zm9ybU9TVmVyc2lvbiI6ICIxMC4wLjE5MDQyLjEuMjU2LjY0Yml0IiwNCgkicGxhdGZvcm1DaGlwc2V0IjogIlVua25vd24iDQp9"
     ranks = {0:"Unranked", 3:"Iron 1",4:"Iron 2",5:"Iron 3", 6:"Bronze 1",7:"Bronze 2",8:"Bronze 3", 9:"Silver 1",10:"Silver 2",11:"Silver 3", 12:"Gold 1",13:"Gold 2",14:"Gold 3", 15:"Platinum 1",16:"Platinum 2",17:"Platinum 3", 18:"Diamond 1",19:"Diamond 2",20:"Diamond 3", 21:"Immortal 1",22:"Immortal 2",23:"Immortal 3", 24:"Radiant"}
     version = "release-03.04-shipping-15-598547"#getVersion(userPuuid, riotToken, entitlement)
@@ -219,10 +234,9 @@ def main(name):
     
 
 
-    print("Waiting for a match...\n")
-    while(getMatchID(userPuuid, riotToken, entitlement)==None):
-        time.sleep(5)
-    print("Match found ! Fetching data...\n")
+    if getMatchID(userPuuid, riotToken, entitlement)==None:
+        return "The player is not in a match !"
+    
     data = fetchMatchPlayers(getMatchID(userPuuid, riotToken, entitlement), riotToken, entitlement)
 
     blue = []
@@ -237,15 +251,17 @@ def main(name):
         for p1,p2 in zip(blue,red):
             stats1 = getPlayerStats(p1["Subject"],riotToken, entitlement, clientPlatform, version)
             stats2 = getPlayerStats(p2["Subject"],riotToken, entitlement, clientPlatform, version)
-            text.append("{:<70}{:>70}".format("Defender " + getCharacterName(p1["CharacterID"],content) + f" [{getPlayerName(p1['Subject'],riotToken,entitlement)}] " + " : " , "Attacker " + getCharacterName(p2["CharacterID"],content) + f" [{getPlayerName(p2['Subject'],riotToken,entitlement)}] " + " :")+"\n")
-            text.append("{:<70}{:>70}".format("LVL = "+str(p1["PlayerIdentity"]["AccountLevel"]) , "LVL = "+str(p2["PlayerIdentity"]["AccountLevel"]))+"\n")
-            text.append("{:<70}{:>70}".format("Rank = " + getPlayerRank(p1["Subject"],riotToken,entitlement,clientPlatform,version,ranks) ,  "Rank = " + getPlayerRank(p2["Subject"],riotToken,entitlement,clientPlatform,version,ranks))+"\n")
-            text.append("{:<70}{:>70}".format(f"ACS : {stats1['acs']}, Win % : {stats1['win%']} (on last {stats1['matchsNb']} matchs)" , f"ACS : {stats2['acs']}, Win % : {stats2['win%']} (on last {stats2['matchsNb']} matchs)")+"\n")
+            text=(text +"{:<40}{:>40}".format("Defender " + getCharacterName(p1["CharacterID"],content) + f" [{getPlayerName(p1['Subject'],riotToken,entitlement)}] " + " : " , "Attacker " + getCharacterName(p2["CharacterID"],content) + f" [{getPlayerName(p2['Subject'],riotToken,entitlement)}] " + " :")+"\n")
+            text=(text +"{:<40}{:>40}".format("LVL = "+str(p1["PlayerIdentity"]["AccountLevel"]) , "LVL = "+str(p2["PlayerIdentity"]["AccountLevel"]))+"\n")
+            text=(text +"{:<40}{:>40}".format("Rank = " + getPlayerRank(p1["Subject"],riotToken,entitlement,clientPlatform,version,ranks) ,  "Rank = " + getPlayerRank(p2["Subject"],riotToken,entitlement,clientPlatform,version,ranks))+"\n")
+            text=(text +"{:<40}{:>40}".format(f"ACS : {stats1['acs']}, Win % : {stats1['win%']} ({stats1['matchsNb']} matchs)" , f"ACS : {stats2['acs']}, Win % : {stats2['win%']} ({stats2['matchsNb']} matchs)")+"\n")
     else:        
         for player in data:
             stats = getPlayerStats(player["Subject"],riotToken, entitlement, clientPlatform, version)
-            text.append(("Defender " if player["TeamID"]=="Blue" else "Attacker ") + getCharacterName(player["CharacterID"],content) + f" [{getPlayerName(player['Subject'],riotToken,entitlement)}] " + " :"+"\n")
-            text.append("    LVL = "+str(player["PlayerIdentity"]["AccountLevel"])+"\n")
-            text.append("    Rank = " + getPlayerRank(player["Subject"],riotToken,entitlement,clientPlatform,version,ranks)+"\n")
-            text.append(f"    ACS : {stats['acs']}, Win % : {stats['win%']} (on last {stats['matchsNb']} matchs)"+"\n")
-    return text
+            text=(text +("Defender " if player["TeamID"]=="Blue" else "Attacker ") + getCharacterName(player["CharacterID"],content) + f" [{getPlayerName(player['Subject'],riotToken,entitlement)}] " + " :"+"\n")
+            text=(text +"    LVL = "+str(player["PlayerIdentity"]["AccountLevel"])+"\n")
+            text=(text +"    Rank = " + getPlayerRank(player["Subject"],riotToken,entitlement,clientPlatform,version,ranks)+"\n")
+            text=(text +f"    ACS : {stats['acs']}, Win % : {stats['win%']} (on last {stats['matchsNb']} matchs)"+"\n")
+    print(text)
+    print(len(text))
+    return "```\n" + text + "\n```"
