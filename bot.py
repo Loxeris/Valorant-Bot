@@ -18,4 +18,4 @@ async def on_message(message):
         print("Loading data")
         await message.channel.send(valorantStats.main(name))
 
-client.run("Njk1NTQ5MTc0ODQxODY4MzM5.XobypQ.7gk1mZFUJYv9Woqbr7oqL709yEA")
+client.run(tokenhere)

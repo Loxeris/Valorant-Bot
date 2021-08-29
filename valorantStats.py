@@ -21,8 +21,8 @@ def getToken(cookies):
 
     payload = {
         "type": "auth",
-        "username": "xBlackL0Lx",
-        "password": "*loris*1",
+        "username": username,
+        "password": password,
         "remember": True,
         "language": "en_US"
     }
@@ -61,6 +61,7 @@ def getMatchID(puuid,riotToken,entitlement, region="eu"):
     try :
         return data["MatchID"]
     except:
+        print(data)
         return None
 
 def fetchMatchPlayers(matchID,riotToken,entitlement, region="eu"):
@@ -213,7 +214,7 @@ def main(name):
     userPuuid = getPuuidbyName(name) #"9a4b2bdf-e43b-5893-8284-9759a4ec2fd1"
     clientPlatform = "ew0KCSJwbGF0Zm9ybVR5cGUiOiAiUEMiLA0KCSJwbGF0Zm9ybU9TIjogIldpbmRvd3MiLA0KCSJwbGF0Zm9ybU9TVmVyc2lvbiI6ICIxMC4wLjE5MDQyLjEuMjU2LjY0Yml0IiwNCgkicGxhdGZvcm1DaGlwc2V0IjogIlVua25vd24iDQp9"
     ranks = {0:"Unranked", 3:"Iron 1",4:"Iron 2",5:"Iron 3", 6:"Bronze 1",7:"Bronze 2",8:"Bronze 3", 9:"Silver 1",10:"Silver 2",11:"Silver 3", 12:"Gold 1",13:"Gold 2",14:"Gold 3", 15:"Platinum 1",16:"Platinum 2",17:"Platinum 3", 18:"Diamond 1",19:"Diamond 2",20:"Diamond 3", 21:"Immortal 1",22:"Immortal 2",23:"Immortal 3", 24:"Radiant"}
-    version = getVersion(userPuuid, riotToken, entitlement)
+    version = "release-03.04-shipping-15-598547"#getVersion(userPuuid, riotToken, entitlement)
     content = fetchContent(clientPlatform,version)
     
 
